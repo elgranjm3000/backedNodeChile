@@ -76,7 +76,10 @@ app.post('/api/sign-in', async (req, res) => {
             role: 'admin'
           };
 
-          const token = jwt.sign({ payload }, secretKey);
+          const expiresIn = '30m'; // El token expirará en 30 min
+
+
+          const token = jwt.sign({ payload }, secretKey, { expiresIn });
 
           const response = {
             uuid: "token_valid",
@@ -124,7 +127,38 @@ app.get('/api/user', (req, res) => {
   try {
     jwt.verify(token, secretKey);
     const decoded = jwt.decode(token);
+    console.log(decoded.payload);
     res.status(200).json(decoded.payload);
+  } catch (error) {
+    res.status(401).json({ message: 'Acceso no autorizado' });
+  }
+});
+
+// Ruta protegida
+app.post('/api/list/product', (req, res) => {
+  // Verificar token
+  const token = req.headers.authorization.split(' ')[1];
+  try {
+    jwt.verify(token, secretKey);
+    const decoded = jwt.decode(token);
+    let ids = [];
+
+    db.query('SELECT * FROM psid_product ',  async (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Error interno del servidor' });
+      }
+  
+      if (results.length > 0) {
+        results.forEach((row) => {
+          ids.push( {"id":row["id_product"] });
+        });
+      }
+
+      res.status(200).json(ids);
+
+  });
+
   } catch (error) {
     res.status(401).json({ message: 'Acceso no autorizado' });
   }
