@@ -76,7 +76,7 @@ app.post('/api/sign-in', async (req, res) => {
             role: 'admin'
           };
 
-          const token = jwt.sign({ email }, secretKey);
+          const token = jwt.sign({ payload }, secretKey);
 
           const response = {
             uuid: "token_valid",
@@ -118,12 +118,13 @@ app.post('/login', async (req, res) => {
 });
 
 // Ruta protegida
-app.get('/protected', (req, res) => {
+app.get('/api/user', (req, res) => {
   // Verificar token
   const token = req.headers.authorization.split(' ')[1];
   try {
     jwt.verify(token, secretKey);
-    res.status(200).json({ message: 'Acceso autorizado' });
+    const decoded = jwt.decode(token);
+    res.status(200).json(decoded.payload);
   } catch (error) {
     res.status(401).json({ message: 'Acceso no autorizado' });
   }
