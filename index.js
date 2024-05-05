@@ -3,11 +3,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql');
 const cors = require('cors');
+const bodyParser = require('body-parser');
 
 
 const app = express();
-app.use(express.json());
+//app.use(express.json());
 app.use(cors());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 
 // Simulación de una base de datos de usuarios
@@ -77,14 +79,14 @@ app.post('/api/sign-in', async (req, res) => {
           const token = jwt.sign({ email }, secretKey);
 
           const response = {
-            uuid: token,
+            uuid: "token_valid",
             from: "custom-db",
-            password: secretKey,
+            password: "$2y$10$PNWjp0z3Cc8dRksriddWc.xUnW9/TI1BQkeDu6GVvTn7K4tAFeiCq",
             user: payload,
             access_token: token
           };
          
-          res.status(200).json({ data: response });
+          res.status(200).json(response);
 
     }
 
@@ -128,7 +130,7 @@ app.get('/protected', (req, res) => {
 });
 
 // Iniciar el servidor
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en http://database:${PORT}`);
 });
