@@ -162,7 +162,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 
-app.post('/api/task', async (req, res) => {
+app.get('/api/task', async (req, res) => {
   const response = 
     [
       {
