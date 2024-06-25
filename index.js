@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+
 const bodyParser = require('body-parser');
 const saltRounds = 10; 
 
@@ -48,6 +51,19 @@ function generarHash(password) {
     });
   });
 }
+
+// Configuración de almacenamiento para multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
 
 // Ruta de registro de usuarios
 app.post('/api/sign-in', async (req, res) => {
@@ -1088,6 +1104,13 @@ app.post('/api/list/product', (req, res) => {
   } catch (error) {
     res.status(401).json({ message: 'Acceso no autorizado' });
   }
+});
+
+app.post('/api/upload', upload.single('photo'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send('No file uploaded.');
+  }
+  res.send(`File uploaded successfully: ${req.file.filename}`);
 });
 
 // Iniciar el servidor
