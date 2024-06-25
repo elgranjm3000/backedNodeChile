@@ -5,10 +5,84 @@ const mysql = require('mysql');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+const aws = require('aws-sdk');
+const config = require('./config.json');
+const { S3Client, PutObjectCommand, ListObjectsCommand } = require('@aws-sdk/client-s3');
+const storageB = multer.memoryStorage();
+
+const uploadB = multer({ storage: storageB });
+
+// Configurar AWS
+aws.config.update(config);
+
+
+
+
+const client = new S3Client({
+  region: "us-east-2",
+  credentials: {
+    accessKeyId: "AKIAV44IJUPD6LZACKGQ",
+    secretAccessKey: "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"
+  }
+});
+
+async function uploadFile(file) {
+  /*const stream = fs.createReadStream(file);
+  const uploadParams = {
+    Bucket: "mybuckerpersonal",
+    Key: "hola.png",
+    Body: stream
+  };
+  const command = new PutObjectCommand(uploadParams);
+  const result = await client.send(command);
+  console.log(result);*/
+
+  try {
+    const uploadParams = {
+      Bucket: 'mybuckerpersonal', // Cambia por el nombre de tu bucket en S3
+      Key: file.originalname,
+      Body: file.buffer
+    };
+
+    const command = new PutObjectCommand(uploadParams);
+    const result = await client.send(command);
+    console.log('File uploaded successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
+}
+
+async function listFilesInS3(bucketName) {
+  try {
+    const listParams = {
+      Bucket: bucketName // Nombre del bucket en S3
+    };
+
+    const command = new ListObjectsCommand(listParams);
+    const response = await client.send(command);
+    
+    const files = response.Contents.map(file => {
+      return {
+        Key: file.Key,
+        URL: `https://${bucketName}.s3.amazonaws.com/${file.Key}`
+      };
+    });
+    console.log('Files in bucket:', files);
+    return files;
+  } catch (error) {
+    console.error('Error listing files:', error);
+    throw error;
+  }
+}
+
 
 const bodyParser = require('body-parser');
 const saltRounds = 10; 
-
+const storageA = multer.memoryStorage();
+const uploadA = multer({ storageA });
 
 const app = express();
 //app.use(express.json());
@@ -1112,6 +1186,49 @@ app.post('/api/upload', upload.single('photo'), (req, res) => {
   }
   res.send(`File uploaded successfully: ${req.file.filename}`);
 });
+
+// Crear directorio de uploads si no existe
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
+app.get('/api/files', (req, res) => {
+  fs.readdir(uploadsDir, (err, files) => {
+    if (err) {
+      return res.status(500).send('Error al leer la carpeta de uploads.');
+    }
+
+    res.json(files);
+  });
+});
+
+
+app.post('/api/uploadaws', uploadB.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const result = await uploadFile(file);
+    res.json({ message: 'File uploaded successfully', data: result });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+app.get('/api/listaws', async (req, res) => {
+  try {
+    const files = await listFilesInS3('mybuckerpersonal');
+    res.json({ files });
+  } catch (error) {
+    console.error('Error listing files:', error);
+    res.status(500).json({ error: 'Failed to list files' });
+  }
+});
+
 
 // Iniciar el servidor
 const PORT = process.env.PORT || 3007;
