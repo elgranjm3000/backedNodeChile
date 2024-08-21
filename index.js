@@ -99,6 +99,9 @@ serverHttp.listen(process.env.HTTP_PORT, process.env.IP);
 serverHttp.on('listening', () => console.info(`Notes App running at http://${process.env.IP}:${process.env.HTTP_PORT}`));
 
 
+// Contenido estático
+app.use(express.static('./public'));
+
 // Simulación de una base de datos de usuarios
 const users = [];
 
