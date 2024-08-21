@@ -10,12 +10,6 @@ const aws = require('aws-sdk');
 const config = require('./config.json');
 const { S3Client, PutObjectCommand, ListObjectsCommand } = require('@aws-sdk/client-s3');
 const storageB = multer.memoryStorage();
-var compression = require('compression');
-
-
-const http = require('http');
-require('dotenv').config();
-const {v4: uuidv4} = require('uuid');
 
 const uploadB = multer({ storage: storageB });
 
@@ -92,18 +86,9 @@ const uploadA = multer({ storageA });
 
 const app = express();
 //app.use(express.json());
-app.use(compression());
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-
-const serverHttp = http.createServer(app);
-serverHttp.listen(process.env.HTTP_PORT, process.env.IP);
-serverHttp.on('listening', () => console.info(`Notes App running at http://${process.env.IP}:${process.env.HTTP_PORT}`));
-
-
-// Contenido estático
-app.use(express.static('./public'));
 
 // Simulación de una base de datos de usuarios
 const users = [];
