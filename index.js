@@ -10,6 +10,8 @@ const aws = require('aws-sdk');
 const config = require('./config.json');
 const { S3Client, PutObjectCommand, ListObjectsCommand } = require('@aws-sdk/client-s3');
 const storageB = multer.memoryStorage();
+var compression = require('compression');
+
 
 const http = require('http');
 require('dotenv').config();
