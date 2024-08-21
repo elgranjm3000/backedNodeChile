@@ -90,6 +90,7 @@ const uploadA = multer({ storageA });
 
 const app = express();
 //app.use(express.json());
+app.use(compression());
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 
