@@ -249,7 +249,7 @@ app.post('/api/register', async (req, res) => {
         console.log('Hash bcrypt:', hash);
 
         // Insertar el nuevo usuario en la base de datos
-        db.query('INSERT INTO psid_employee (lastname, email, passwd) VALUES (?, ?, ?)', [displayName,email, hash], (error, results) => {
+        db.query('INSERT INTO help_user (lastname, email, passwd) VALUES (?, ?, ?)', [displayName,email, hash], (error, results) => {
           if (error) {
             console.error(error);
             return res.status(500).json({ message: 'Error al registrar el usuario' });
