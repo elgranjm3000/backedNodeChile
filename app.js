@@ -111,9 +111,9 @@ const users = [];
 
 const db = mysql.createConnection({
     host: '45.191.0.164',
-    user: 'teknoinsumos2_insumos', // Usuario de MySQL
-    password: '}H(eSN2AP7-{', // Contraseña de MySQL
-    database: 'teknoinsumos2_insumos' // Nombre de tu base de datos
+    user: 'teknodat11_helpdesk', // Usuario de MySQL
+    password: 'klp%PW5}k!^$', // Contraseña de MySQL
+    database: 'teknodat11_helpdesk' // Nombre de tu base de datos
   });
 
   // Conectar a la base de datos
@@ -170,7 +170,7 @@ app.post('/api/sign-in', async (req, res) => {
   }
 
   // Verificar si el usuario ya existe
-  db.query('SELECT * FROM psid_employee WHERE email = ?', [email], async (error, results) => {
+  db.query('SELECT * FROM help_user WHERE email = ?', [email], async (error, results) => {
     if (error) {
       console.error(error);
       return res.status(500).json({ message: 'Error interno del servidor' });
@@ -234,7 +234,7 @@ app.post('/api/register', async (req, res) => {
   const { email, password, displayName } = req.body;
 
   // Verificar si el usuario ya está registrado
-  db.query('SELECT * FROM psid_employee WHERE email = ?', [email], async (error, results) => {
+  db.query('SELECT * FROM help_user WHERE email = ?', [email], async (error, results) => {
     if (error) {
       console.error(error);
       return res.status(500).json({ message: 'Error interno del servidor' });
