@@ -1098,7 +1098,34 @@ app.get('/api/task', async (req, res) => {
 });
 
 
-app.get('/api/task/tag', async (req, res) => {
+app.post('/api/task/tag', async (req, res) => {
+
+  const token = req.headers.authorization.split(' ')[1];
+  try {
+    jwt.verify(token, secretKey);
+    const decoded = jwt.decode(token);
+    let ids = [];
+
+    db.query('SELECT * FROM report_type ',  async (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Error interno del servidor' });
+      }
+  
+      if (results.length > 0) {
+        results.forEach((row) => {
+          ids.push( {"id":row["id"],"title":row["titlesoport"] });
+        });
+      }
+
+      res.status(200).json(ids);
+
+  });
+
+  } catch (error) {
+    res.status(401).json({ message: 'Acceso no autorizado' });
+  }
+
   const response =  [
     {
       "id": "a0bf42ca-c3a5-47be-8341-b9c0bb8ef270",
@@ -1126,7 +1153,7 @@ app.get('/api/task/tag', async (req, res) => {
     }
   ];
 
-  res.status(200).json(response);
+  res.status(200).json(ids);
 
 })
 
