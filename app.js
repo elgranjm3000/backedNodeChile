@@ -1126,7 +1126,9 @@ app.post('/api/task/tag', async (req, res) => {
     res.status(401).json({ message: 'Acceso no autorizado' });
   }
 
-  const response =  [
+  res.status(200).json(ids);
+
+  /*const response =  [
     {
       "id": "a0bf42ca-c3a5-47be-8341-b9c0bb8ef270",
       "title": "Api"
@@ -1152,8 +1154,7 @@ app.post('/api/task/tag', async (req, res) => {
       "title": "Discuss"
     }
   ];
-
-  res.status(200).json(ids);
+*/
 
 })
 
