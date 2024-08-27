@@ -267,8 +267,11 @@ app.post('/api/register', async (req, res) => {
 });
 
 
-app.get('/api/task', async (req, res) => {
-  const query = `
+app.get('/api/task/:id?', async (req, res) => {
+  const taskId = req.query.id; // Obtener el ID de la tarea desde los parámetros de la ruta, si existe
+
+  // Definir la consulta SQL base
+  let query = `
     SELECT 
       t.id AS taskId,
       t.type,
@@ -286,7 +289,12 @@ app.get('/api/task', async (req, res) => {
     LEFT JOIN sub_tasks s ON t.id = s.taskId
   `;
 
-  db.query(query, (err, results) => {
+  // Agregar condición WHERE solo si se proporciona un ID de tarea
+  if (taskId) {
+    query += ` WHERE t.id = ?`;
+  }
+
+  db.query(query, taskId ? [taskId] : [], (err, results) => {
     if (err) {
       console.error('Error al obtener las tareas:', err);
       res.status(500).send('Error al obtener las tareas');
@@ -329,6 +337,7 @@ app.get('/api/task', async (req, res) => {
     res.json(tasks);
   });
 });
+
 
 
 app.get('/api/task/tag', async (req, res) => {
