@@ -267,7 +267,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 
-app.get('/api/task/:id?', async (req, res) => {
+app.get('/api/tasks/:id?', async (req, res) => {
   const taskId = req.query.id; // save Obtener el ID de la tarea desde los parámetros de la ruta, si existe
 
   // Definir la consulta SQL base
@@ -334,7 +334,12 @@ app.get('/api/task/:id?', async (req, res) => {
     }, []);
 
     // Enviar los resultados como respuesta
-    res.json(tasks);
+    if (taskId) {
+      res.json(tasks.length > 0 ? tasks[0] : {});
+    } else {
+      // Si no hay taskId, devolver todas las tareas en un array.
+      res.json(tasks);
+    }
   });
 });
 
@@ -343,10 +348,11 @@ app.get('/api/task/:id?', async (req, res) => {
 app.get('/api/task/tag', async (req, res) => {
 
   const token = req.headers.authorization.split(' ')[1];
+  let ids = [];
+
   try {
     jwt.verify(token, secretKey);
     const decoded = jwt.decode(token);
-    let ids = [];
 
     db.query('SELECT * FROM report_type ',  async (error, results) => {
       if (error) {
@@ -368,7 +374,6 @@ app.get('/api/task/tag', async (req, res) => {
     res.status(401).json({ message: 'Acceso no autorizado' });
   }
 
-  res.status(200).json(ids);
 
   
 
