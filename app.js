@@ -268,7 +268,7 @@ app.post('/api/register', async (req, res) => {
 
 
 app.get('/api/task/:id?', async (req, res) => {
-  const taskId = req.query.id; // Obtener el ID de la tarea desde los parámetros de la ruta, si existe
+  const taskId = req.params.id; // Obtener el ID de la tarea desde los parámetros de la ruta, si existe
 
   // Definir la consulta SQL base
   let query = `
