@@ -325,8 +325,8 @@ app.get('/api/tasks/:id?', async (req, res) => {
 
   // Definir la consulta SQL base
   let query = `
-    SELECT
-      t.uuid, 
+    SELECT 
+      t.uuid as taskUuid, 
       t.id AS taskId,
       t.type,
       t.title,
@@ -362,10 +362,10 @@ app.get('/api/tasks/:id?', async (req, res) => {
     // Organizar los resultados en un formato de JSON más estructurado
     const tasks = results.reduce((acc, row) => {
       // Buscar o crear la tarea en la lista acumulada
-      let task = acc.find(t => t.id === row.taskId);
+      let task = acc.find(t => t.id === row.taskUuid);
       if (!task) {
         task = {
-          id: row.uuid,
+          id: row.taskUuid,
           type: row.type,
           title: row.title,
           notes: row.notes,
