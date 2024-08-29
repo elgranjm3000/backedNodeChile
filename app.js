@@ -309,7 +309,7 @@ app.post('/api/tasks', (req, res) => {
         
       });
     } else {
-      res.status(201).send(`Tarea y tags insertados correctamente con ID ${newTaskId}.`);
+      res.status(201).send({id:newTaskId});
     }
   });
     } else {
