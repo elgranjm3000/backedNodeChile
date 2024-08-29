@@ -275,17 +275,7 @@ app.post('/api/tasks', (req, res) => {
 
   const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
 
-  // Verifica y transforma `tags` si llega en el formato 'tags[]'
-  if (typeof tags === 'object' && tags['tags[]']) {
-    tags = Array.isArray(tags['tags[]']) ? tags['tags[]'] : [tags['tags[]']];
-  } else if (typeof tags === 'string') {
-    // Si `tags` es una cadena, conviértelo en un array
-    tags = [tags];
-  } else {
-    // Si `tags` no está definido, asegúrate de que sea un array vacío
-    tags = tags || [];
-  }
-  
+
   const newId = uuidv4(); // Generar un nuevo UUID
   // Prepara la consulta SQL para insertar la tarea principal
   const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask,uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
