@@ -96,7 +96,7 @@ const app = express();
 app.use(express.json());
 app.use(compression());
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: false }));
+//app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.urlencoded({ extended: true }));
 
 
@@ -273,11 +273,11 @@ app.post('/api/register', async (req, res) => {
 
 // Endpoint para insertar datos
 app.post('/api/tasks', (req, res) => {
-  console.log('req.body:', req.body); // Añadir este log para verificar el contenido del cuerpo de la solicitud
+
 
   const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
 
-
+console.log(req.body);
   const newId = uuidv4(); // Generar un nuevo UUID
   // Prepara la consulta SQL para insertar la tarea principal
   const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask,uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
