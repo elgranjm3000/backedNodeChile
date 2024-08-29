@@ -13,6 +13,7 @@ const storageB = multer.memoryStorage();
 var compression = require('compression');
 
 
+
 const http = require('http');
 require('dotenv').config();
 const {v4: uuidv4} = require('uuid');
@@ -270,12 +271,12 @@ app.post('/api/register', async (req, res) => {
 // Endpoint para insertar datos
 app.post('/api/tasks', (req, res) => {
   const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
-
+  const newId = uuidv4(); // Generar un nuevo UUID
   // Prepara la consulta SQL para insertar la tarea principal
-  const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask,uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   // Ejecuta la consulta para la tarea principal
-  db.query(taskQuery, [type, title, notes, completed, dueDate, priority,  assignedTo, order], (err, result) => {
+  db.query(taskQuery, [type, title, notes, completed, dueDate, priority,  assignedTo, order,newId], (err, result) => {
     if (err) {
       console.error('Error insertando la tarea principal:', err);
       return res.status(500).send('Error insertando la tarea principal.');
@@ -308,11 +309,11 @@ app.post('/api/tasks', (req, res) => {
         
       });
     } else {
-      res.status(201).send({id:newTaskId});
+      res.status(201).send({id:newId});
     }
   });
     } else {
-      res.status(201).send({id:newTaskId});
+      res.status(201).send({id:newId});
     }
   });
 });
@@ -324,7 +325,8 @@ app.get('/api/tasks/:id?', async (req, res) => {
 
   // Definir la consulta SQL base
   let query = `
-    SELECT 
+    SELECT
+      t.uuid, 
       t.id AS taskId,
       t.type,
       t.title,
@@ -347,7 +349,7 @@ app.get('/api/tasks/:id?', async (req, res) => {
 
   // Agregar condición WHERE solo si se proporciona un ID de tarea
   if (taskId) {
-    query += ` WHERE t.id = ?`;
+    query += ` WHERE t.uuid = ?`;
   }
 
   db.query(query, taskId ? [taskId] : [], (err, results) => {
@@ -363,7 +365,7 @@ app.get('/api/tasks/:id?', async (req, res) => {
       let task = acc.find(t => t.id === row.taskId);
       if (!task) {
         task = {
-          id: row.taskId,
+          id: row.uuid,
           type: row.type,
           title: row.title,
           notes: row.notes,
