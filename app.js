@@ -345,12 +345,12 @@ app.get('/api/tasks/:id?', async (req, res) => {
       t.priority,
       t.assignedTo,
       t.ordertask,      
-      tg.uuid AS tagId,
-      tg.uuid AS tagUuid,
+      tg.id AS tagId,
+      tg.id AS tagUuid,
       tg.titlesoport AS tagTitle
     FROM tasks t
     LEFT JOIN task_tags tt ON t.uuid = tt.taskId
-    LEFT JOIN report_type tg ON tt.tagId = tg.uuid
+    LEFT JOIN report_type tg ON tt.tagId = tg.id
   `;
 
   // Agregar condición WHERE solo si se proporciona un ID de tarea
@@ -432,7 +432,7 @@ app.get('/api/task/tag', async (req, res) => {
   
       if (results.length > 0) {
         results.forEach((row) => {
-          ids.push( {"id":row["uuid"],"title":row["titlesoport"] });
+          ids.push( {"id":row["id"],"title":row["titlesoport"] });
         });
       }
 
