@@ -91,7 +91,7 @@ const storageA = multer.memoryStorage();
 const uploadA = multer({ storageA });
 
 const app = express();
-//app.use(express.json());
+app.use(express.json());
 app.use(compression());
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -265,6 +265,59 @@ app.post('/api/register', async (req, res) => {
     }
   });
 });
+
+
+// Endpoint para insertar datos
+app.post('/api/tasks', (req, res) => {
+  const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
+
+  // Prepara la consulta SQL para insertar la tarea principal
+  const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  // Ejecuta la consulta para la tarea principal
+  db.query(taskQuery, [type, title, notes, completed, dueDate, priority,  assignedTo, order], (err, result) => {
+    if (err) {
+      console.error('Error insertando la tarea principal:', err);
+      return res.status(500).send('Error insertando la tarea principal.');
+    }
+
+    // Si hay subtareas, inserta cada una de ellas en la base de datos
+    const newTaskId = result.insertId;
+
+    if (tags && tags.length > 0) {
+      const sqlInsertTaskTags = `INSERT INTO task_tags (taskId, tagId) VALUES ?`;
+      const taskTagValues = tags.map(tagId => [newTaskId, tagId]);
+
+      db.query(sqlInsertTaskTags, [taskTagValues], (error) => {
+        if (error) {
+          console.error('Error al insertar los tags:', error);
+          return res.status(500).send('Error al insertar los tags.');
+        }
+        
+
+    if (subTasks && subTasks.length > 0) {
+      const subTaskQuery = `INSERT INTO sub_tasks (title, completed, taskId) VALUES ?`;
+      const subTaskData = subTasks.map(subTask => [subTask.title, subTask.completed, newTaskId]);
+
+      db.query(subTaskQuery, [subTaskData], (err, result) => {
+        if (err) {
+          console.error('Error insertando subtareas:', err);
+          return res.status(500).send('Error insertando subtareas.');
+        }
+
+        res.status(201).send('Tarea y subtareas insertadas exitosamente.');
+        
+      });
+    } else {
+      res.status(201).send(`Tarea y tags insertados correctamente con ID ${newTaskId}.`);
+    }
+  });
+    } else {
+      res.status(201).send('Tarea insertada exitosamente.');
+    }
+  });
+});
+
 
 
 app.get('/api/tasks/:id?', async (req, res) => {
