@@ -271,6 +271,8 @@ app.post('/api/register', async (req, res) => {
 
 // Endpoint para insertar datos
 app.post('/api/tasks', (req, res) => {
+  debug('req.body:', req.body); // Añadir este log para verificar el contenido del cuerpo de la solicitud
+
   const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
   const newId = uuidv4(); // Generar un nuevo UUID
   // Prepara la consulta SQL para insertar la tarea principal
