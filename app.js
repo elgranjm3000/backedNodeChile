@@ -336,9 +336,13 @@ app.get('/api/tasks/:id?', async (req, res) => {
       t.ordertask,
       s.id AS subTaskId,
       s.title AS subTaskTitle,
-      s.completed AS subTaskCompleted
+      s.completed AS subTaskCompleted,
+      tg.id AS tagId,
+      tg.titlesoport AS tagTitle
     FROM tasks t
     LEFT JOIN sub_tasks s ON t.id = s.taskId
+    LEFT JOIN task_tags tt ON t.id = tt.taskId
+    LEFT JOIN report_type tg ON tt.tagId = tg.id
   `;
 
   // Agregar condición WHERE solo si se proporciona un ID de tarea
@@ -368,7 +372,8 @@ app.get('/api/tasks/:id?', async (req, res) => {
           priority: row.priority,
           assignedTo: row.assignedTo,
           order: row.ordertask,
-          subTasks: []
+          subTasks: [],
+          tags : []
         };
         acc.push(task);
       }
@@ -380,6 +385,17 @@ app.get('/api/tasks/:id?', async (req, res) => {
           title: row.subTaskTitle,
           completed: row.subTaskCompleted
         });
+      }
+
+      // Agregar el tag si existe y no se ha agregado previamente
+      if (row.tagId) {
+        const tagExists = task.tags.some(tag => tag.id === row.tagId);
+        if (!tagExists) {
+          task.tags.push({
+            id: row.tagId,
+            title: row.tagTitle
+          });
+        }
       }
 
       return acc;
