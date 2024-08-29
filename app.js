@@ -283,7 +283,8 @@ app.post('/api/tasks', (req, res) => {
     }
 
     // Si hay subtareas, inserta cada una de ellas en la base de datos
-    const newTaskId = result.insertId;
+    const newTaskId = newId;
+ 
     if (tags && tags.length > 0) {
       const sqlInsertTaskTags = `INSERT INTO task_tags (taskId, tagId) VALUES ?`;
       const taskTagValues = tags.map(tagId => [newTaskId, tagId]);
@@ -327,7 +328,6 @@ app.get('/api/tasks/:id?', async (req, res) => {
   let query = `
     SELECT 
       t.uuid as taskUuid, 
-      t.id AS taskId,
       t.type,
       t.title,
       t.notes,
@@ -335,17 +335,13 @@ app.get('/api/tasks/:id?', async (req, res) => {
       t.dueDate,
       t.priority,
       t.assignedTo,
-      t.ordertask,
-      s.id AS subTaskId,
-      s.title AS subTaskTitle,
-      s.completed AS subTaskCompleted,
-      tg.id AS tagId,
+      t.ordertask,      
+      tg.uuid AS tagId,
       tg.uuid AS tagUuid,
       tg.titlesoport AS tagTitle
     FROM tasks t
-    LEFT JOIN sub_tasks s ON t.id = s.taskId
-    LEFT JOIN task_tags tt ON t.id = tt.taskId
-    LEFT JOIN report_type tg ON tt.tagId = tg.id
+    LEFT JOIN task_tags tt ON t.uuid = tt.taskId
+    LEFT JOIN report_type tg ON tt.tagId = tg.uuid
   `;
 
   // Agregar condición WHERE solo si se proporciona un ID de tarea
@@ -382,13 +378,13 @@ app.get('/api/tasks/:id?', async (req, res) => {
       }
 
       // Agregar la subtarea si existe
-      if (row.subTaskId) {
+     /* if (row.subTaskId) {
         task.subTasks.push({
           id: row.subTaskId,
           title: row.subTaskTitle,
           completed: row.subTaskCompleted
         });
-      }
+      }*/
 
       // Agregar el tag si existe y no se ha agregado previamente
       if (row.tagUuid && !task.tags.includes(row.tagUuid)) {
