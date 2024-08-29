@@ -283,7 +283,6 @@ app.post('/api/tasks', (req, res) => {
 
     // Si hay subtareas, inserta cada una de ellas en la base de datos
     const newTaskId = result.insertId;
-
     if (tags && tags.length > 0) {
       const sqlInsertTaskTags = `INSERT INTO task_tags (taskId, tagId) VALUES ?`;
       const taskTagValues = tags.map(tagId => [newTaskId, tagId]);
