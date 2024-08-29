@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const debug = require('debug')('app:tasks');
 const mysql = require('mysql');
 const cors = require('cors');
 const multer = require('multer');
@@ -285,6 +286,7 @@ app.post('/api/tasks', (req, res) => {
     // Si hay subtareas, inserta cada una de ellas en la base de datos
     const newTaskId = newId;
  
+    debug('tags:', tags);
     if (tags && tags.length > 0) {
       const sqlInsertTaskTags = `INSERT INTO task_tags (taskId, tagId) VALUES ?`;
       const taskTagValues = tags.map(tagId => [newTaskId, tagId]);
@@ -292,6 +294,8 @@ app.post('/api/tasks', (req, res) => {
       db.query(sqlInsertTaskTags, [taskTagValues], (error) => {
         if (error) {
           console.error('Error al insertar los tags:', error);
+          debug('Error al insertar los tags:', error);
+
           return res.status(500).send('Error al insertar los tags.');
         }
         
