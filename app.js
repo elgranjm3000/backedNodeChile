@@ -97,6 +97,8 @@ app.use(express.json());
 app.use(compression());
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
+
 
 
 const serverHttp = http.createServer(app);
@@ -271,7 +273,7 @@ app.post('/api/register', async (req, res) => {
 
 // Endpoint para insertar datos
 app.post('/api/tasks', (req, res) => {
-  debug('req.body:', req.body); // Añadir este log para verificar el contenido del cuerpo de la solicitud
+  console.log('req.body:', req.body); // Añadir este log para verificar el contenido del cuerpo de la solicitud
 
   const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
 
@@ -290,8 +292,8 @@ app.post('/api/tasks', (req, res) => {
     // Si hay subtareas, inserta cada una de ellas en la base de datos
     const newTaskId = newId;
  
-    debug('Datos de la tarea:', { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order });
-    debug('Nuevo UUID generado para la tarea:', newId);
+    console.log('Datos de la tarea:', { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order });
+    console.log('Nuevo UUID generado para la tarea:', newId);
     if (tags && tags.length > 0) {
       const sqlInsertTaskTags = `INSERT INTO task_tags (taskId, tagId) VALUES ?`;
       const taskTagValues = tags.map(tagId => [newTaskId, tagId]);
