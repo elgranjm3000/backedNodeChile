@@ -340,6 +340,7 @@ app.get('/api/tasks/:id?', async (req, res) => {
       s.title AS subTaskTitle,
       s.completed AS subTaskCompleted,
       tg.id AS tagId,
+      tg.uuid AS tagUuid,
       tg.titlesoport AS tagTitle
     FROM tasks t
     LEFT JOIN sub_tasks s ON t.id = s.taskId
@@ -390,8 +391,8 @@ app.get('/api/tasks/:id?', async (req, res) => {
       }
 
       // Agregar el tag si existe y no se ha agregado previamente
-      if (row.tagId && !task.tags.includes(row.tagId)) {
-        task.tags.push(row.tagId); // Solo agregar el ID del tag
+      if (row.tagUuid && !task.tags.includes(row.tagUuid)) {
+        task.tags.push(row.tagUuid); // Solo agregar el ID del tag
       }
 
       return acc;
@@ -426,7 +427,7 @@ app.get('/api/task/tag', async (req, res) => {
   
       if (results.length > 0) {
         results.forEach((row) => {
-          ids.push( {"id":row["id"],"title":row["titlesoport"] });
+          ids.push( {"id":row["uuid"],"title":row["titlesoport"] });
         });
       }
 
