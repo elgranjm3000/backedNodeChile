@@ -388,14 +388,8 @@ app.get('/api/tasks/:id?', async (req, res) => {
       }
 
       // Agregar el tag si existe y no se ha agregado previamente
-      if (row.tagId) {
-        const tagExists = task.tags.some(tag => tag.id === row.tagId);
-        if (!tagExists) {
-          task.tags.push({
-            id: row.tagId,
-            title: row.tagTitle
-          });
-        }
+      if (row.tagId && !task.tags.includes(row.tagId)) {
+        task.tags.push(row.tagId); // Solo agregar el ID del tag
       }
 
       return acc;
