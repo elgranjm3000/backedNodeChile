@@ -12,6 +12,7 @@ const config = require('./config.json');
 const { S3Client, PutObjectCommand, ListObjectsCommand } = require('@aws-sdk/client-s3');
 const storageB = multer.memoryStorage();
 var compression = require('compression');
+const mysqlnew = require('mysql2/promise'); // Importa mysql2 con soporte para Promesas
 
 
 
@@ -119,6 +120,14 @@ const db = mysql.createConnection({
     password: 'klp%PW5}k!^$', // Contraseña de MySQL
     database: 'teknodat11_helpdesk' // Nombre de tu base de datos
   });
+
+  const pool = mysqlnew.createPool({
+    host: '45.191.0.164',
+    user: 'teknodat11_helpdesk', // Usuario de MySQL
+    password: 'klp%PW5}k!^$', // Contraseña de MySQL
+    database: 'teknodat11_helpdesk' // Nombre de tu base de datos
+  });
+
 
   // Conectar a la base de datos
 db.connect((err) => {
@@ -234,6 +243,46 @@ app.post('/api/sign-in', async (req, res) => {
   });
 });
 
+app.post('/api/reorder', (req, res) => {
+  const { startIndex, idStartIndex, endIndex, idEndIndex } = req.body;
+
+  const updateQuery1 = `
+    UPDATE tasks
+    SET ordertask = ${startIndex}          
+    WHERE uuid = '${idStartIndex}';
+`;
+
+const updateQuery2 = `
+    UPDATE tasks
+    SET ordertask = ${endIndex}          
+    WHERE uuid = '${idEndIndex}';
+`;
+
+// Valores para la primera actualización
+const values1 = [startIndex, idStartIndex];
+
+// Valores para la segunda actualización
+const values2 = [endIndex, idEndIndex];
+
+
+// Ejecutar la primera consulta
+db.query(updateQuery1, values1, (err, result) => {
+    if (err) {
+        return res.status(500).json({ success: false, message: 'Error actualizando el orden', error: err });
+    }
+
+    // Si la primera consulta fue exitosa, ejecutar la segunda
+    db.query(updateQuery2, values2, (err, result) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: 'Error actualizando el orden', error: err });
+        }
+        res.json({ success: true, message: 'Orden actualizado correctamente' });
+    });
+});
+
+  
+});
+
 app.post('/api/register', async (req, res) => {
   const { email, password, displayName } = req.body;
 
@@ -271,19 +320,43 @@ app.post('/api/register', async (req, res) => {
 });
 
 
+
+app.post('/api/uploadaws', uploadB.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const result = await uploadFile(file);
+    res.json({ message: 'File uploaded successfully', data: result });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
 // Endpoint para insertar datos
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', uploadB.single('file'), async (req, res) => {
+
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const result = await uploadFile(file);
+    idfileaws = result.$metadata.extendedRequestId;
 
 
-  const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
+    const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
 
-console.log(req.body);
   const newId = uuidv4(); // Generar un nuevo UUID
   // Prepara la consulta SQL para insertar la tarea principal
-  const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask,uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask,uuid,fileaws) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`;
 
   // Ejecuta la consulta para la tarea principal
-  db.query(taskQuery, [type, title, notes, completed, dueDate, priority,  assignedTo, order,newId], (err, result) => {
+  db.query(taskQuery, [type, title, notes, completed, dueDate, priority,  assignedTo, order,newId,idfileaws], (err, result) => {
     if (err) {
       console.error('Error insertando la tarea principal:', err);
       return res.status(500).send('Error insertando la tarea principal.');
@@ -293,7 +366,6 @@ console.log(req.body);
     const newTaskId = newId;
  
     console.log('Datos de la tarea:', { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order });
-    console.log('Nuevo UUID generado para la tarea:', newId);
     if (tags && tags.length > 0) {
       const sqlInsertTaskTags = `INSERT INTO task_tags (taskId, tagId) VALUES ?`;
       const taskTagValues = tags.map(tagId => [newTaskId, tagId]);
@@ -328,6 +400,89 @@ console.log(req.body);
       res.status(201).send({id:newId});
     }
   });
+    
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+
+  
+});
+
+
+app.put('/api/tasks/:id?', async (req, res) => {
+  const taskId = req.query.id;
+  const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
+
+  try {
+    console.log(taskId);
+    console.log(completed);
+    const completedValue = completed === 'true' || completed === true ? 1 : 0;
+
+console.log(completedValue);
+    // Actualiza la tarea principal
+    const updateTaskQuery = `
+      UPDATE tasks 
+      SET type = ?, title = ?, notes = ?, completed = ?, dueDate = ?, priority = ?, assignedTo = ?, ordertask = ?
+      WHERE uuid = ?
+    `;
+
+    await pool.query(updateTaskQuery, [type, title, notes, completedValue, dueDate, priority, assignedTo, order, taskId]);
+
+    // Elimina los tags actuales
+    const deleteTaskTagsQuery = `DELETE FROM task_tags WHERE taskId = ?`;
+    await pool.query(deleteTaskTagsQuery, [taskId]);
+
+    // Inserta los nuevos tags, si existen
+    if (tags && tags.length > 0) {
+      const sqlInsertTaskTags = `INSERT INTO task_tags (taskId, tagId) VALUES ?`;
+      const taskTagValues = tags.map(tagId => [taskId, tagId]);
+
+      await pool.query(sqlInsertTaskTags, [taskTagValues]);
+    }
+
+    // Elimina las subtareas actuales
+    const deleteSubTasksQuery = `DELETE FROM sub_tasks WHERE taskId = ?`;
+    await pool.query(deleteSubTasksQuery, [taskId]);
+
+    // Inserta las nuevas subtareas, si existen
+    if (subTasks && subTasks.length > 0) {
+      const subTaskQuery = `INSERT INTO sub_tasks (title, completed, taskId) VALUES ?`;
+      const subTaskData = subTasks.map(subTask => [subTask.title, subTask.completed, taskId]);
+
+      await pool.query(subTaskQuery, [subTaskData]);
+    }
+
+    // Enviar la respuesta
+    res.status(200).send('Tarea y subtareas actualizadas exitosamente.');
+  } catch (err) {
+    console.error('Error actualizando la tarea principal:', err);
+    res.status(500).send('Error actualizando la tarea.');
+  }
+});
+
+app.delete('/api/tasks/:id?', async (req, res) => {
+  const taskId = req.params.id;
+
+  try {
+    // Primero, eliminamos las subtareas relacionadas con la tarea
+    const deleteSubTasksQuery = `DELETE FROM sub_tasks WHERE taskId = ?`;
+    await pool.query(deleteSubTasksQuery, [taskId]);
+
+    // Luego, eliminamos los tags asociados a la tarea
+    const deleteTaskTagsQuery = `DELETE FROM task_tags WHERE taskId = ?`;
+    await pool.query(deleteTaskTagsQuery, [taskId]);
+
+    // Finalmente, eliminamos la tarea principal
+    const deleteTaskQuery = `DELETE FROM tasks WHERE uuid = ?`;
+    await pool.query(deleteTaskQuery, [taskId]);
+
+    // Respuesta exitosa
+    res.status(200).send('Tarea y sus asociaciones eliminadas exitosamente.');
+  } catch (err) {
+    console.error('Error eliminando la tarea:', err);
+    res.status(500).send('Error eliminando la tarea.');
+  }
 });
 
 
@@ -340,6 +495,7 @@ app.get('/api/tasks/:id?', async (req, res) => {
     SELECT 
       t.uuid as taskUuid, 
       t.type,
+      t.fileaws,
       t.title,
       t.notes,
       t.completed,
@@ -359,6 +515,8 @@ app.get('/api/tasks/:id?', async (req, res) => {
   if (taskId) {
     query += ` WHERE t.uuid = ?`;
   }
+  // Agregar el ORDER BY al final de la consulta
+  query += ` ORDER BY t.ordertask ASC`;
 
   db.query(query, taskId ? [taskId] : [], (err, results) => {
     if (err) {
@@ -382,6 +540,7 @@ app.get('/api/tasks/:id?', async (req, res) => {
           priority: row.priority,
           assignedTo: row.assignedTo,
           order: row.ordertask,
+          files: row.fileaws,
           subTasks: [],
           tags : []
         };
