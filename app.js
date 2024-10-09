@@ -8,6 +8,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const aws = require('aws-sdk');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+
 const config = require('./config.json');
 const { S3Client, PutObjectCommand, ListObjectsCommand } = require('@aws-sdk/client-s3');
 const storageB = multer.memoryStorage();
@@ -36,7 +39,19 @@ const client = new S3Client({
   }
 });
 
-async function uploadFile(file) {
+async function firma(fileAWS){
+  const params = {
+    Bucket: 'mybuckerpersonal',  // Nombre del bucket
+    Key: fileAWS,  // Nombre del objeto en S3
+    Expires: 120  // Tiempo de expiración en segundos (en este caso 1 minuto)
+};
+
+  const command = new GetObjectCommand(params);
+  const url = await getSignedUrl(client, command, { expiresIn: 3600 }); // Expira en 1 hora
+  return url;
+}
+
+async function uploadFile(file,newId) {
   /*const stream = fs.createReadStream(file);
   const uploadParams = {
     Bucket: "mybuckerpersonal",
@@ -50,7 +65,7 @@ async function uploadFile(file) {
   try {
     const uploadParams = {
       Bucket: 'mybuckerpersonal', // Cambia por el nombre de tu bucket en S3
-      Key: file.originalname,
+      Key: `${newId}_${file.originalname}`,
       Body: file.buffer
     };
 
@@ -202,6 +217,7 @@ app.post('/api/sign-in', async (req, res) => {
 
       payload = {
         data: {
+          id: user.id,
           displayName: user.firstname + " " + user.lastname,
           photoURL: "assets/images/avatars/Abbott.jpg",
           email: email,
@@ -339,19 +355,20 @@ app.post('/api/uploadaws', uploadB.single('file'), async (req, res) => {
 // Endpoint para insertar datos
 app.post('/api/tasks', uploadB.single('file'), async (req, res) => {
 
+  const newId = uuidv4(); // Generar un nuevo UUID
+
   try {
     const file = req.file;
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const result = await uploadFile(file);
-    idfileaws = result.$metadata.extendedRequestId;
+    const result = await uploadFile(file,newId);
+    idfileaws = file.originalname;
 
 
     const { type, title, notes, completed, dueDate, priority, tags, assignedTo, subTasks, order } = req.body;
 
-  const newId = uuidv4(); // Generar un nuevo UUID
   // Prepara la consulta SQL para insertar la tarea principal
   const taskQuery = `INSERT INTO tasks (type, title, notes, completed, dueDate, priority,  assignedTo, ordertask,uuid,fileaws) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`;
 
@@ -487,8 +504,8 @@ app.delete('/api/tasks/:id?', async (req, res) => {
 
 
 
-app.get('/api/tasks/:id?', async (req, res) => {
-  const taskId = req.query.id; // save Obtener el ID de la tarea desde los parámetros de la ruta, si existe
+app.get('/api/tasks/:id?/:iduser?', async (req, res) => {
+  const taskId = req.query.id; 
 
   // Definir la consulta SQL base
   let query = `
@@ -518,7 +535,7 @@ app.get('/api/tasks/:id?', async (req, res) => {
   // Agregar el ORDER BY al final de la consulta
   query += ` ORDER BY t.ordertask ASC`;
 
-  db.query(query, taskId ? [taskId] : [], (err, results) => {
+  db.query(query, taskId ? [taskId] : [], async (err, results) => {
     if (err) {
       console.error('Error al obtener las tareas:', err);
       res.status(500).send('Error al obtener las tareas');
@@ -526,49 +543,36 @@ app.get('/api/tasks/:id?', async (req, res) => {
     }
 
     // Organizar los resultados en un formato de JSON más estructurado
-    const tasks = results.reduce((acc, row) => {
-      // Buscar o crear la tarea en la lista acumulada
-      let task = acc.find(t => t.id === row.taskUuid);
-      if (!task) {
-        task = {
-          id: row.taskUuid,
-          type: row.type,
-          title: row.title,
-          notes: row.notes,
-          completed: row.completed,
-          dueDate: row.dueDate,
-          priority: row.priority,
-          assignedTo: row.assignedTo,
-          order: row.ordertask,
-          files: row.fileaws,
-          subTasks: [],
-          tags : []
-        };
-        acc.push(task);
-      }
+    const tasksPromises = results.map(async (row) => {
+      let task = {
+        id: row.taskUuid,
+        type: row.type,
+        title: row.title,
+        notes: row.notes,
+        completed: row.completed,
+        dueDate: row.dueDate,
+        priority: row.priority,
+        assignedTo: row.assignedTo,
+        order: row.ordertask,
+        files: row.fileaws ? await firma(`${row.taskUuid}_${row.fileaws}`).catch(err => "Error al obtener archivo") : "",
+        subTasks: [],
+        tags: [],
+      };
 
-      // Agregar la subtarea si existe
-     /* if (row.subTaskId) {
-        task.subTasks.push({
-          id: row.subTaskId,
-          title: row.subTaskTitle,
-          completed: row.subTaskCompleted
-        });
-      }*/
-
-      // Agregar el tag si existe y no se ha agregado previamente
       if (row.tagUuid && !task.tags.includes(row.tagUuid)) {
-        task.tags.push(row.tagUuid); // Solo agregar el ID del tag
+        task.tags.push(row.tagUuid);
       }
 
-      return acc;
-    }, []);
+      return task;
+    });
+
+    // Resolver todas las promesas de las tareas
+    const tasks = await Promise.all(tasksPromises);
 
     // Enviar los resultados como respuesta
     if (taskId) {
       res.json(tasks.length > 0 ? tasks[0] : {});
     } else {
-      // Si no hay taskId, devolver todas las tareas en un array.
       res.json(tasks);
     }
   });
@@ -721,6 +725,35 @@ app.get('/api/listaws', async (req, res) => {
   } catch (error) {
     console.error('Error listing files:', error);
     res.status(500).json({ error: 'Failed to list files' });
+  }
+});
+
+
+app.post('/api/firma', async (req, res) => {
+  // Usar req.params para obtener el parámetro 'id' de la URL
+  
+  const { filename } = req.body
+  
+  try {
+      // Verificar si taskId es válido
+      if (!filename) {
+          return res.status(400).json({ message: 'ID parameter is required' });
+      }
+
+      // Llamar a la función 'firma' y esperar el resultado
+      const result = await firma(filename);
+
+      // Verificar si se obtuvo un resultado válido
+      if (!result) {
+          return res.status(404).json({ message: 'File not found' });
+      }
+
+      // Enviar respuesta JSON exitosa
+      res.json({ message: 'File uploaded successfully', data: result });
+  } catch (error) {
+      // Manejo de errores
+      console.error('Error occurred:', error);
+      res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 });
 
